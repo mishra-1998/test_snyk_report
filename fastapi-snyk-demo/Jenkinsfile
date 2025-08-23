@@ -1,0 +1,76 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Setup Python Env') {
+            steps {
+                sh '''
+                python3 -m venv venv
+                . venv/bin/activate
+                pip install -r requirements.txt
+                '''
+            }
+        }
+
+        stage('Run FastAPI (Background)') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                nohup uvicorn app.main:app --port 8000 &
+                sleep 5
+                '''
+            }
+        }
+
+        stage('Snyk Auth') {
+            steps {
+                sh '''
+                # Requires SNYK_TOKEN to be set in Jenkins Credentials
+                snyk auth $SNYK_TOKEN
+                '''
+            }
+        }
+
+        stage('Snyk Dependency Test') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                snyk test --file=requirements.txt --python --json > snyk_dependency_report.json
+                snyk test --file=requirements.txt --python --json | snyk-to-html -o snyk_dependency_report.html
+                '''
+            }
+        }
+
+        stage('Snyk Code Test') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                snyk code test --json > snyk_code_report.json
+                snyk code test --json | snyk-to-html -o snyk_code_report.html
+                '''
+            }
+        }
+
+        stage('Archive Reports') {
+            steps {
+                archiveArtifacts artifacts: 'snyk_*_report.*', fingerprint: true
+            }
+        }
+
+        stage('Publish HTML Reports') {
+            steps {
+                publishHTML([
+                    reportDir: '.',
+                    reportFiles: 'snyk_dependency_report.html,snyk_code_report.html',
+                    reportName: 'Snyk Security Reports'
+                ])
+            }
+        }
+    }
+}
