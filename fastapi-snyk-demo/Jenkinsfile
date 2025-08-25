@@ -1,6 +1,16 @@
 pipeline {
     agent any
 
+    triggers {
+        // Run pipeline automatically on PRs (GitHub webhook required)
+        githubPullRequest()
+    }
+
+    environment {
+        // Load Snyk token from Jenkins credentials (secret text)
+        SNYK_TOKEN = credentials('snyk-token')
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -22,8 +32,8 @@ pipeline {
             steps {
                 sh '''
                 . venv/bin/activate
-                nohup uvicorn app.main:app --port 8000 &
-                sleep 5
+                nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > fastapi.log 2>&1 &
+                sleep 10
                 '''
             }
         }
@@ -31,7 +41,6 @@ pipeline {
         stage('Snyk Auth') {
             steps {
                 sh '''
-                # Requires SNYK_TOKEN to be set in Jenkins Credentials
                 snyk auth $SNYK_TOKEN
                 '''
             }
@@ -57,9 +66,32 @@ pipeline {
             }
         }
 
+        // stage('FastAPI Health Check with PR Details') {
+        //     steps {
+        //         script {
+        //             def prNumber = env.CHANGE_ID ?: "N/A"
+        //             def prTitle = env.CHANGE_TITLE ?: "N/A"
+        //             def prAuthor = env.CHANGE_AUTHOR ?: "N/A"
+        //             def prBranch = env.CHANGE_BRANCH ?: "N/A"
+
+        //             sh """
+        //             echo "Testing FastAPI endpoint..."
+        //             curl -s -X POST http://localhost:8000/pr-check \\
+        //                 -H 'Content-Type: application/json' \\
+        //                 -d '{
+        //                     "pr_number": "${prNumber}",
+        //                     "title": "${prTitle}",
+        //                     "author": "${prAuthor}",
+        //                     "branch": "${prBranch}"
+        //                 }' || true
+        //             """
+        //         }
+        //     }
+        // }
+
         stage('Archive Reports') {
             steps {
-                archiveArtifacts artifacts: 'snyk_*_report.*', fingerprint: true
+                archiveArtifacts artifacts: 'snyk_*_report.* fastapi.log', fingerprint: true
             }
         }
 
@@ -71,6 +103,12 @@ pipeline {
                     reportName: 'Snyk Security Reports'
                 ])
             }
+        }
+    }
+
+    post {
+        always {
+            sh "pkill -f uvicorn || true"  // cleanup FastAPI
         }
     }
 }
