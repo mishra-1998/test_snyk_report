@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         // Load Snyk token from Jenkins credentials (secret text)
-        SNYK_TOKEN = credentials('snyk-token')
+        SNYK_TOKEN = credentials('50c43f36-f6be-4715-9788-cfbf178add4c')
     }
 
     stages {
