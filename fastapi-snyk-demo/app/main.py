@@ -23,7 +23,7 @@ class PRData(BaseModel):
 @app.post("/pr-check")
 async def pr_check(pr: PRData, request: Request):
     client_host = request.client.host
-    logger.info(f"PR Check received from {client_host}: {pr.dict()}")
+    logger.info(f"PR Check received from {client_host}:- {pr.dict()}")
     
     # this is for test
     response = {
