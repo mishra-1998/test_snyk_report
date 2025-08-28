@@ -23,7 +23,7 @@ pipeline {
                 sh '''
                 python3 -m venv venv
                 . venv/bin/activate
-                pip install -r requirements.txt
+                pip install -r fastapi-snyk-demo/requirements.txt
                 '''
             }
         }
@@ -50,8 +50,8 @@ pipeline {
             steps {
                 sh '''
                 . venv/bin/activate
-                snyk test --file=requirements.txt --python --json > snyk_dependency_report.json
-                snyk test --file=requirements.txt --python --json | snyk-to-html -o snyk_dependency_report.html
+                snyk test --file=fastapi-snyk-demo/requirements.txt --python --json > snyk_dependency_report.json
+                snyk test --file=fastapi-snyk-demo/requirements.txt --json | snyk-to-html -o snyk_dependency_report.html
                 '''
             }
         }
