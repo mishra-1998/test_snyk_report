@@ -3,7 +3,7 @@ pipeline {
 
     triggers {
         // Run pipeline automatically on PRs (GitHub webhook required)
-        githubPullRequest()
+        githubPush()
     }
 
     environment {
