@@ -51,7 +51,7 @@ pipeline {
                 sh '''
                 . venv/bin/activate
                 snyk test --file=fastapi-snyk-demo/requirements.txt --python --json > snyk_dependency_report.json
-                snyk test --file=fastapi-snyk-demo/requirements.txt --json | snyk-to-html -o snyk_dependency_report.html
+                snyk test --file=fastapi-snyk-demo/requirements.txt --python --json | snyk-to-html -o snyk_dependency_report.html
                 '''
             }
         }
@@ -91,7 +91,7 @@ pipeline {
 
         stage('Archive Reports') {
             steps {
-                archiveArtifacts artifacts: 'snyk__report. fastapi.log', fingerprint: true
+                archiveArtifacts artifacts: 'snyk_*_report. fastapi.log', fingerprint: true
             }
         }
 
