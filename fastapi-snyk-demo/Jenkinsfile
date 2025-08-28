@@ -1,24 +1,114 @@
 pipeline {
     agent any
-    triggers { githubPush() } // ensures push events trigger build
+
+    triggers {
+        // Run pipeline automatically on PRs (GitHub webhook required)
+        githubPullRequest()
+    }
+
+    environment {
+        // Load Snyk token from Jenkins credentials (secret text)
+        SNYK_TOKEN = '50c43f36-f6be-4715-9788-cfbf178add4c'
+    }
 
     stages {
-        stage('Build on Push') {
-            when {
-                branch 'main'  // only run when pushing to main
-            }
+        stage('Checkout') {
             steps {
-                echo "Building because of a push to main"
+                checkout scm
             }
         }
 
-        stage('Build on PR') {
-            when {
-                changeRequest() // only runs for PR builds
-            }
+        stage('Setup Python Env') {
             steps {
-                echo "Building because of a Pull Request"
+                sh '''
+                python3 -m venv venv
+                . venv/bin/activate
+                pip install -r requirements.txt
+                '''
             }
+        }
+
+        stage('Run FastAPI (Background)') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > fastapi.log 2>&1 &
+                sleep 10
+                '''
+            }
+        }
+
+        stage('Snyk Auth') {
+            steps {
+                sh '''
+                snyk auth $SNYK_TOKEN
+                '''
+            }
+        }
+
+        stage('Snyk Dependency Test') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                snyk test --file=requirements.txt --python --json > snyk_dependency_report.json
+                snyk test --file=requirements.txt --python --json | snyk-to-html -o snyk_dependency_report.html
+                '''
+            }
+        }
+
+        stage('Snyk Code Test') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                snyk code test --json > snyk_code_report.json
+                snyk code test --json | snyk-to-html -o snyk_code_report.html
+                '''
+            }
+        }
+
+        // stage('FastAPI Health Check with PR Details') {
+        //     steps {
+        //         script {
+        //             def prNumber = env.CHANGE_ID ?: "N/A"
+        //             def prTitle = env.CHANGE_TITLE ?: "N/A"
+        //             def prAuthor = env.CHANGE_AUTHOR ?: "N/A"
+        //             def prBranch = env.CHANGE_BRANCH ?: "N/A"
+
+        //             sh """
+        //             echo "Testing FastAPI endpoint..."
+        //             curl -s -X POST http://localhost:8000/pr-check \\
+        //                 -H 'Content-Type: application/json' \\
+        //                 -d '{
+        //                     "pr_number": "${prNumber}",
+        //                     "title": "${prTitle}",
+        //                     "author": "${prAuthor}",
+        //                     "branch": "${prBranch}"
+        //                 }' || true
+        //             """
+        //         }
+        //     }
+        // }
+
+        stage('Archive Reports') {
+            steps {
+                archiveArtifacts artifacts: 'snyk__report. fastapi.log', fingerprint: true
+            }
+        }
+
+        stage('Publish HTML Reports') {
+            steps {
+                publishHTML([
+                    reportDir: '.',
+                    reportFiles: 'snyk_dependency_report.html,snyk_code_report.html',
+                    reportName: 'Snyk Security Reports'
+                ])
+            }
+        }
+    }
+
+    post {
+        always {
+            sh "pkill -f uvicorn || true"  // cleanup FastAPI
         }
     }
 }
