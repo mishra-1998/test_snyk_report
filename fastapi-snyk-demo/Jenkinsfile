@@ -3,12 +3,12 @@ pipeline {
 
     triggers {
         // Run pipeline automatically on PRs (GitHub webhook required)
-        githubPullRequest()
+        githubPush()
     }
 
     environment {
         // Load Snyk token from Jenkins credentials (secret text)
-        SNYK_TOKEN = credentials('50c43f36-f6be-4715-9788-cfbf178add4c')
+        SNYK_TOKEN = '50c43f36-f6be-4715-9788-cfbf178add4c'
     }
 
     stages {
@@ -23,7 +23,7 @@ pipeline {
                 sh '''
                 python3 -m venv venv
                 . venv/bin/activate
-                pip install -r requirements.txt
+                pip install -r fastapi-snyk-demo/requirements.txt
                 '''
             }
         }
@@ -49,9 +49,8 @@ pipeline {
         stage('Snyk Dependency Test') {
             steps {
                 sh '''
-                . venv/bin/activate
-                snyk test --file=requirements.txt --python --json > snyk_dependency_report.json
-                snyk test --file=requirements.txt --python --json | snyk-to-html -o snyk_dependency_report.html
+                source venv/bin/activate
+                snyk test --file=fastapi-snyk-demo/requirements.txt --python --json > snyk_dependency_report.json
                 '''
             }
         }
@@ -91,7 +90,7 @@ pipeline {
 
         stage('Archive Reports') {
             steps {
-                archiveArtifacts artifacts: 'snyk_*_report.* fastapi.log', fingerprint: true
+                archiveArtifacts artifacts: 'snyk_*_report. fastapi.log', fingerprint: true
             }
         }
 
