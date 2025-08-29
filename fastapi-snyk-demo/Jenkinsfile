@@ -49,7 +49,7 @@ pipeline {
         stage('Snyk Dependency Test') {
             steps {
                 sh '''
-                source venv/bin/activate
+                . venv/bin/activate
                 snyk test --file=fastapi-snyk-demo/requirements.txt --python --json > snyk_dependency_report.json
                 '''
             }
