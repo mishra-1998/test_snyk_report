@@ -7,6 +7,7 @@ pipeline {
     }
 
     environment {
+	//
         // Load Snyk token from Jenkins credentials (secret text)
         SNYK_TOKEN = '50c43f36-f6be-4715-9788-cfbf178add4c'
     }
@@ -90,7 +91,7 @@ pipeline {
 
         stage('Archive Reports') {
             steps {
-                archiveArtifacts artifacts: 'snyk_*_report. fastapi.log', fingerprint: true
+                archiveArtifacts artifacts:  'fastapi.log', fingerprint: true
             }
         }
 
