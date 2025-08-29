@@ -51,7 +51,6 @@ pipeline {
                 sh '''
                 source venv/bin/activate
                 snyk test --file=fastapi-snyk-demo/requirements.txt --python --json > snyk_dependency_report.json
-                snyk-to-html -i snyk_dependency_report.json -o snyk_dependency_report.html
                 '''
             }
         }
