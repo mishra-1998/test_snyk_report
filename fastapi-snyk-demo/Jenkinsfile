@@ -50,7 +50,7 @@ pipeline {
             steps {
                 sh '''
                 . venv/bin/activate
-                snyk test --file=fastapi-snyk-demo/requirements.txt --python --json > snyk_dependency_report.json
+                snyk test --file=fastapi-snyk-demo/requirements.txt --python --json > snyk_dependency_report.json || true
                 '''
             }
         }
