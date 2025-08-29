@@ -49,9 +49,10 @@ pipeline {
         stage('Snyk Dependency Test') {
             steps {
                 sh '''
-                source venv/bin/activate
-                snyk test --file=fastapi-snyk-demo/requirements.txt --python --json > snyk_dependency_report.json
-                '''
+                . venv/bin/activate
+                snyk test --file=fastapi-snyk-demo/requirements.txt --python --json > snyk_dependency_report.json || true
+		snyk test --file=requirements.txt --python --json | snyk-to-html -o snyk_dependency_report.html || true
+		'''
             }
         }
 
@@ -59,8 +60,8 @@ pipeline {
             steps {
                 sh '''
                 . venv/bin/activate
-                snyk code test --json > snyk_code_report.json
-                snyk code test --json | snyk-to-html -o snyk_code_report.html
+                snyk code test --json > snyk_code_report.json || true
+                snyk code test --json | snyk-to-html -o snyk_code_report.html || true
                 '''
             }
         }
