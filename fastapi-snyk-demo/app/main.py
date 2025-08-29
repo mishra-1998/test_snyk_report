@@ -15,6 +15,7 @@ def vulnerable_endpoint(user_input: str):
 
 
 class PRData(BaseModel):
+    ""
     pr_number: str
     title: str
     author: str
